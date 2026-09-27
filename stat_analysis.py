@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import sqlite3
 import pandas as pd
+from scipy.stats import ttest_ind
+from statsmodels.stats.multitest import multipletests
 
 conn = sqlite3.connect("cell_count.db")
 # need to use sql approach for rest as instructions ask us to do it later in part 4 so just keep it as is.
@@ -47,12 +49,12 @@ ORDER BY subject, population
 """
 
 subject_df = pd.read_sql_query(subject_query,conn)
-print(subject_df.head())
+# print(subject_df.head())
 
 # compare differences
 
 pops = ["b_cell", "cd8_t_cell", "cd4_t_cell", "nk_cell", "monocyte"]
-
+results = []
 fig,axes = plt.subplots(1,5,figsize = (16,5), sharey=True)
 for ax, population in zip(axes,pops):
     population_df = subject_df[subject_df["population"] == population]
@@ -62,7 +64,30 @@ for ax, population in zip(axes,pops):
     ax.set_xticks([1,2])
     ax.set_xticklabels(["Reponse", "Non-Response"])
     ax.set_title(population.replace("_", " ").title())
+    # since checking for difference of means simple t test can be done, use whelches because the variances might not be equal
+    test = ttest_ind(responders_df,non_response_df,equal_var = False)
+    # print(f"{population}: p-val = {test.pvalue:.6g}")
+    results.append({
+      "population": population,
+      "responder_mean": responders_df.mean(),
+      "nonresponder_mean": non_response_df.mean(),
+      "difference_pp": responders_df.mean() - non_response_df.mean(),
+      "p_value": test.pvalue
+    })
 
+result_df = pd.DataFrame(results)
+# holm adjustment becuase of the 5 groups and want to repot which group was higher to each other as well
+significant, adj_p, _, _ = multipletests(result_df["p_value"],alpha = 0.05, method= "holm")
+result_df["adj_p"] = adj_p
+result_df["significance"] = significant
+print(result_df)
 axes[0].set_ylabel("Mean rel freq per subject (%)")
 plt.tight_layout()
 plt.show()
+
+conn.close()
+
+result_df.to_csv("stat_results.csv", index = False)
+subject_df.to_csv("subject_freq.csv", index = False)
+
+
