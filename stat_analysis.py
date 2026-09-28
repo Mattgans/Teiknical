@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import sqlite3
 import pandas as pd
 from scipy.stats import ttest_ind
@@ -55,15 +54,12 @@ subject_df = pd.read_sql_query(subject_query,conn)
 
 pops = ["b_cell", "cd8_t_cell", "cd4_t_cell", "nk_cell", "monocyte"]
 results = []
-fig,axes = plt.subplots(1,5,figsize = (16,5), sharey=True)
-for ax, population in zip(axes,pops):
+for population in pops:
     population_df = subject_df[subject_df["population"] == population]
     responders_df = population_df[population_df["response"] == "yes"]["mean_percentage"]
     non_response_df = population_df[population_df["response"] == "no"]["mean_percentage"]
-    ax.boxplot([responders_df,non_response_df])
-    ax.set_xticks([1,2])
-    ax.set_xticklabels(["Reponse", "Non-Response"])
-    ax.set_title(population.replace("_", " ").title())
+    if min(len(responders_df), len(non_response_df)) < 2:
+        raise ValueError(f"{population}: need at least two subjects per response group.")
     # since checking for difference of means simple t test can be done, use whelches because the variances might not be equal
     test = ttest_ind(responders_df,non_response_df,equal_var = False)
     # print(f"{population}: p-val = {test.pvalue:.6g}")
@@ -81,13 +77,9 @@ significant, adj_p, _, _ = multipletests(result_df["p_value"],alpha = 0.05, meth
 result_df["adj_p"] = adj_p
 result_df["significance"] = significant
 print(result_df)
-axes[0].set_ylabel("Mean rel freq per subject (%)")
-plt.tight_layout()
-plt.show()
+# The dashboard draws boxplots from subject_freq.csv; no plot window blocks the pipeline.
 
 conn.close()
 
-result_df.to_csv("stat_results.csv", index = False)
-subject_df.to_csv("subject_freq.csv", index = False)
-
-
+result_df.to_csv("data/results/stat_results.csv", index=False)
+subject_df.to_csv("data/results/subject_freq.csv", index=False)

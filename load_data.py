@@ -2,7 +2,7 @@ import sqlite3 as sq
 import csv
 
 
-csv_file_path = 'cell-count.csv'
+csv_file_path = 'data/cell-count.csv'
 
 connect = sq.connect('cell_count.db')
 connect.execute("PRAGMA foreign_keys = ON")
@@ -101,4 +101,5 @@ with open(csv_file_path, 'r', newline = '') as file:
             ))
 
 connect.commit()
+
 connect.close()

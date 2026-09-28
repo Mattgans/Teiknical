@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+dashboard/node_modules/
+dashboard/dist/
+dashboard/public/data/*
+!dashboard/public/data/.gitkeep
+dashboard/test-results/
+dashboard/playwright-report/
+*.db
+analysis_results/
+/data/results/*.csv
